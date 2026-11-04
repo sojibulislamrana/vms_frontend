@@ -1,0 +1,28 @@
+# ==============================================================================
+# Netlify Configuration for Flutter Web Deployment
+# ==============================================================================
+
+[build]
+  # Netlify build servers do not have Flutter pre-installed.
+  # This command shallow-clones the stable Flutter SDK and builds the release web bundle.
+  # It automatically forwards the API_BASE_URL environment variable set in Netlify.
+  command = "git clone https://github.com/flutter/flutter.git --depth 1 -b stable _flutter && ./_flutter/bin/flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL"
+  publish = "build/web"
+
+[build.environment]
+  FLUTTER_VERSION = "stable"
+
+# Single-Page Application (SPA) routing:
+# Ensures page refreshes load index.html rather than returning 404
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Standard security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
