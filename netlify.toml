@@ -6,7 +6,7 @@
   # Netlify build servers do not have Flutter pre-installed.
   # This command shallow-clones the stable Flutter SDK and builds the release web bundle.
   # It automatically forwards the API_BASE_URL environment variable set in Netlify.
-  command = "git clone https://github.com/flutter/flutter.git --depth 1 -b stable _flutter && ./_flutter/bin/flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL"
+  command = "git clone https://github.com/flutter/flutter.git --depth 1 -b stable _flutter && echo \"Building Flutter Web with API_BASE_URL=$API_BASE_URL\" && ./_flutter/bin/flutter build web --release --dart-define=API_BASE_URL=\"$API_BASE_URL\""
   publish = "build/web"
 
 [build.environment]
