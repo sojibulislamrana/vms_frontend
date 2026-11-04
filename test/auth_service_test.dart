@@ -102,6 +102,31 @@ void main() {
       expect(authService.token, isNull);
       expect(authService.errorMessage, isNull);
     });
+
+    test('Session persists across restarts and restores authenticated state', () async {
+      // Step 1: User logs in on session A
+      final sessionA = AuthService(autoRestore: false);
+      final success = await sessionA.login(
+        email: 'admin@starkgroup.com',
+        password: 'stark123',
+      );
+      expect(success, isTrue);
+      expect(sessionA.isAuthenticated, isTrue);
+
+      // Step 2: Browser refreshes -> session B initializes with autoRestore = true
+      final sessionB = AuthService(autoRestore: true);
+      expect(sessionB.isAuthenticated, isTrue);
+      expect(sessionB.currentUser?.email, equals('admin@starkgroup.com'));
+      expect(sessionB.currentUser?.name, equals('Tony Stark'));
+
+      // Step 3: User logs out -> session C initializes and is unauthenticated
+      sessionB.logout();
+      expect(sessionB.isAuthenticated, isFalse);
+
+      final sessionC = AuthService(autoRestore: true);
+      expect(sessionC.isAuthenticated, isFalse);
+      expect(sessionC.currentUser, isNull);
+    });
   });
 }
 

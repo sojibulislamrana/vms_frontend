@@ -59,17 +59,23 @@ class _VmsAppState extends State<VmsApp> {
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeMode,
-              home: _authService.isAuthenticated
-                  ? AppShell(
-                      authService: _authService,
-                      vehicleService: _vehicleService,
-                      themeModeNotifier: _themeModeNotifier,
-                      onLogout: _handleLogout,
-                    )
-                  : LoginScreen(
-                      authService: _authService,
-                      onLoginSuccess: () => setState(() {}),
-                    ),
+              onGenerateRoute: (settings) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (context) => _authService.isAuthenticated
+                      ? AppShell(
+                          authService: _authService,
+                          vehicleService: _vehicleService,
+                          themeModeNotifier: _themeModeNotifier,
+                          onLogout: _handleLogout,
+                          initialRoute: settings.name,
+                        )
+                      : LoginScreen(
+                          authService: _authService,
+                          onLoginSuccess: () => setState(() {}),
+                        ),
+                );
+              },
             );
           },
         );

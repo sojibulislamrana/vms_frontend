@@ -1,49 +1,65 @@
 import 'package:flutter/material.dart';
 
 /// Centralized Material 3 theme configuration for the Stark Group VMS Admin application.
-/// Provides both light and dark themes with high-contrast typography, precise borders,
-/// and Stark Group signature industrial blues and slates.
+/// Provides a clean, minimal, premium SaaS dashboard aesthetic following Reference Image 2:
+/// Vibrant blue branding, crisp white surfaces, subtle light-gray backgrounds, refined borders,
+/// and polished interactive components in both light and dark modes.
 class AppTheme {
   AppTheme._();
 
-  // Stark Group Signature Palette
-  static const Color starkNavy = Color(0xFF0F172A); // Deep Slate Navy
-  static const Color starkElectricBlue = Color(0xFF0284C7); // Arc Blue Accent
-  static const Color starkBlueAccent = Color(0xFF2563EB); // Vibrant Primary
-  static const Color starkSurfaceLight = Color(0xFFF8FAFC);
-  static const Color starkBackgroundLight = Color(0xFFF1F5F9);
-  static const Color starkBorderLight = Color(0xFFCBD5E1);
+  // Premium SaaS Brand Palette (Blue Dominant)
+  static const Color primaryBlue = Color(0xFF2563EB); // Vibrant Royal Blue (Primary)
+  static const Color primaryBlueDark = Color(0xFF1D4ED8); // Hover / Focused Blue
+  static const Color primaryBlueLight = Color(0xFFEFF6FF); // Soft Blue Tint for active states
+  static const Color accentSky = Color(0xFF0284C7); // Electric Cyan Accent
+  static const Color slateNavy = Color(0xFF0F172A); // Deep Slate Navy for headings
 
-  static const Color starkDarkBg = Color(0xFF090D16);
-  static const Color starkDarkCard = Color(0xFF131B2E);
-  static const Color starkDarkBorder = Color(0xFF1E293B);
+  // Light Mode Surfaces & Borders
+  static const Color lightBg = Color(0xFFF8FAFC); // Subtle Gray Background
+  static const Color lightCard = Colors.white;
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightBorderHover = Color(0xFFCBD5E1);
 
-  /// Light theme definition (Stark Group Executive Admin)
+  // Dark Mode Carbon Palette
+  static const Color darkBg = Color(0xFF0B0F19);
+  static const Color darkCard = Color(0xFF151D2A);
+  static const Color darkBorder = Color(0xFF222F43);
+  static const Color darkPrimary = Color(0xFF3B82F6);
+
+  // Status Colors (Matching Reference Specs)
+  static const Color statusActiveGreen = Color(0xFF16A34A);
+  static const Color statusActiveBg = Color(0xFFF0FDF4);
+  static const Color statusMaintenanceOrange = Color(0xFFEA580C);
+  static const Color statusMaintenanceBg = Color(0xFFFFFBEB);
+  static const Color statusInactiveGray = Color(0xFF64748B);
+  static const Color statusInactiveBg = Color(0xFFF1F5F9);
+
+  /// Light theme definition (Clean, minimal, premium SaaS dashboard aesthetic)
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: starkNavy,
-      primary: starkNavy,
-      secondary: starkElectricBlue,
-      tertiary: starkBlueAccent,
+      seedColor: primaryBlue,
+      primary: primaryBlue,
+      secondary: accentSky,
+      tertiary: slateNavy,
       brightness: Brightness.light,
-      surface: starkSurfaceLight,
+      surface: lightCard,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: starkBackgroundLight,
+      scaffoldBackgroundColor: lightBg,
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: lightBorder, width: 1),
         ),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
-        foregroundColor: starkNavy,
+        foregroundColor: slateNavy,
         elevation: 0,
         scrolledUnderElevation: 1,
         centerTitle: false,
@@ -53,19 +69,19 @@ class AppTheme {
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: starkBorderLight),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: lightBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: starkBorderLight),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: lightBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: starkElectricBlue, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primaryBlue, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFDC2626)),
         ),
         labelStyle: const TextStyle(
@@ -73,31 +89,35 @@ class AppTheme {
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: starkNavy,
+          backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: starkNavy,
+          foregroundColor: slateNavy,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
-          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+          side: const BorderSide(color: lightBorder, width: 1.2),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
@@ -114,42 +134,47 @@ class AppTheme {
         }),
         headingTextStyle: const TextStyle(
           fontWeight: FontWeight.w700,
-          color: Color(0xFF334155),
+          color: Color(0xFF475569),
           fontSize: 12,
-          letterSpacing: 0.6,
+          letterSpacing: 0.5,
         ),
         dataTextStyle: const TextStyle(
-          color: Color(0xFF0F172A),
+          color: slateNavy,
           fontSize: 14,
         ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: lightBorder,
+        thickness: 1,
+        space: 1,
       ),
     );
   }
 
-  /// Dark theme definition (Stark Group Carbon / Night Mode)
+  /// Dark theme definition (Carbon Slate / Premium Night Mode)
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: starkElectricBlue,
-      primary: starkElectricBlue,
+      seedColor: darkPrimary,
+      primary: darkPrimary,
       secondary: const Color(0xFF38BDF8),
       brightness: Brightness.dark,
-      surface: starkDarkCard,
+      surface: darkCard,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: starkDarkBg,
+      scaffoldBackgroundColor: darkBg,
       cardTheme: CardThemeData(
-        color: starkDarkCard,
+        color: darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: starkDarkBorder, width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: darkBorder, width: 1),
         ),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: starkDarkCard,
+        backgroundColor: darkCard,
         foregroundColor: Color(0xFFF8FAFC),
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -157,22 +182,22 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF0B101D),
+        fillColor: const Color(0xFF0F172A),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: darkBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: darkBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: starkElectricBlue, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: darkPrimary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFEF4444)),
         ),
         labelStyle: const TextStyle(
@@ -180,20 +205,24 @@ class AppTheme {
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF64748B),
+          fontSize: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: starkElectricBlue,
+          backgroundColor: darkPrimary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ),
@@ -202,9 +231,9 @@ class AppTheme {
           foregroundColor: const Color(0xFFF8FAFC),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
-          side: const BorderSide(color: Color(0xFF475569), width: 1.2),
+          side: const BorderSide(color: darkBorder, width: 1.2),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
@@ -223,12 +252,17 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: Color(0xFF94A3B8),
           fontSize: 12,
-          letterSpacing: 0.6,
+          letterSpacing: 0.5,
         ),
         dataTextStyle: const TextStyle(
           color: Color(0xFFF8FAFC),
           fontSize: 14,
         ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: darkBorder,
+        thickness: 1,
+        space: 1,
       ),
     );
   }
