@@ -82,14 +82,21 @@ vms_frontend/
 ### Run Locally
 ```bash
 cd vms_frontend
+
+# Connect to local Spring Boot backend (default: http://localhost:8080)
 flutter run -d chrome
+
+# Or customize the API backend URL:
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
+
 # Or test with a local web server:
-flutter run -d web-server --web-port=8080
+flutter run -d web-server --web-port=8082
 ```
 
 ### Build for Production Web
 ```bash
-flutter build web
+# Production web build with custom API URL:
+flutter build web --dart-define=API_BASE_URL=https://api.yourdomain.com
 ```
 
 ### Run Static Analysis and Test Suite
