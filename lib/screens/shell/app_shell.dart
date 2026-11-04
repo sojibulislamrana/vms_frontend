@@ -176,7 +176,13 @@ class _AppShellState extends State<AppShell> {
         children: [
           if (isDesktop) _buildDesktopSidebar(theme),
           Expanded(
-            child: _buildCurrentContent(),
+            child: Column(
+              children: [
+                if (_isHostedOnCloudWithLocalhostBackend())
+                  _buildBackendWarningBanner(theme),
+                Expanded(child: _buildCurrentContent()),
+              ],
+            ),
           ),
         ],
       ),
@@ -261,42 +267,54 @@ class _AppShellState extends State<AppShell> {
             listenable: widget.vehicleService,
             builder: (context, _) {
               final connected = widget.vehicleService.isBackendConnected;
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: connected
-                                ? const Color(0xFF16A34A)
-                                : Colors.amber.shade700,
-                            shape: BoxShape.circle,
+              return InkWell(
+                onTap: () => _showBackendConfigDialog(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: connected
+                                  ? const Color(0xFF16A34A)
+                                  : Colors.amber.shade700,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          connected ? 'Spring Boot Online' : 'REST API Ready',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ApiConstants.baseUrl,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              connected ? 'Spring Boot Online' : 'REST API Ready',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Icon(
+                            Icons.tune_rounded,
+                            size: 14,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.4),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        ApiConstants.baseUrl,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color:
+                              theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -433,6 +451,18 @@ class _AppShellState extends State<AppShell> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.tune_rounded),
+            title: const Text('Backend API URL'),
+            subtitle: Text(
+              ApiConstants.baseUrl,
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _showBackendConfigDialog(context);
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.logout_rounded),
             title: const Text('Sign Out'),
             onTap: () {
@@ -471,5 +501,99 @@ class _AppShellState extends State<AppShell> {
           onCancel: () => _navigateToView(ShellView.vehicleList),
         );
     }
+  }
+
+  bool _isHostedOnCloudWithLocalhostBackend() {
+    try {
+      final host = Uri.base.host;
+      if (host.isNotEmpty && host != 'localhost' && host != '127.0.0.1') {
+        return ApiConstants.baseUrl.contains('localhost');
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Widget _buildBackendWarningBanner(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      color: Colors.amber.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              color: Colors.amber.shade900, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Backend is pointing to localhost:8080 (blocked on hosted HTTPS). Connect your live Render backend URL.',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF451A03),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonal(
+            onPressed: () => _showBackendConfigDialog(context),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              visualDensity: VisualDensity.compact,
+            ),
+            child:
+                const Text('Connect Backend', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBackendConfigDialog(BuildContext context) {
+    final controller = TextEditingController(text: ApiConstants.baseUrl);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Backend API Server'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your deployed Spring Boot REST API URL (e.g. from Render):',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'https://vms-backend.onrender.com',
+                labelText: 'Backend Base URL',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.cloud_outlined),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newUrl = controller.text.trim();
+              if (newUrl.isNotEmpty) {
+                ApiConstants.setBaseUrl(newUrl);
+                Navigator.of(dialogContext).pop();
+                setState(() {});
+                await widget.vehicleService.fetchVehicles();
+              }
+            },
+            child: const Text('Save & Connect'),
+          ),
+        ],
+      ),
+    );
   }
 }
