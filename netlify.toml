@@ -12,6 +12,11 @@
 [build.environment]
   FLUTTER_VERSION = "stable"
 
+# Prevent missing source maps from redirecting to index.html with HTML 200:
+[[redirects]]
+  from = "/*.map"
+  status = 404
+
 # Single-Page Application (SPA) routing:
 # Ensures page refreshes load index.html rather than returning 404
 [[redirects]]
