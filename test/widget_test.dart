@@ -20,5 +20,13 @@ void main() {
     expect(find.text('Fleet Directory'), findsOneWidget);
     expect(find.text('TOTAL FLEET'), findsOneWidget);
     expect(find.text('Register Vehicle'), findsAtLeastNWidgets(1));
+
+    // Tap on the navbar logo / brand to go to Home (Dashboard)
+    await tester.tap(find.byTooltip('Go to Home (Dashboard)'));
+    await tester.pumpAndSettle();
+
+    // Verify Home / Dashboard is presented with executive overview
+    expect(find.text('Welcome back, Tony Stark'), findsOneWidget);
+    expect(find.text('Fleet Operational Rate'), findsOneWidget);
   });
 }

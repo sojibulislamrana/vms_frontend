@@ -471,26 +471,29 @@ class DashboardOverviewScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Featured Fleet Inventory',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Featured Fleet Inventory',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'High-priority operational assets across business divisions.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  const SizedBox(height: 2),
+                  Text(
+                    'High-priority operational assets across business divisions.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            const SizedBox(width: 12),
             OutlinedButton.icon(
               onPressed: onNavigateToVehicles,
               icon: const Icon(Icons.arrow_forward_rounded, size: 16),

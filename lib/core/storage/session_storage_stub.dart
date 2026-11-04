@@ -28,3 +28,4 @@ class StubSessionStorage implements SessionStorage {
     _hash = route;
   }
 }
+

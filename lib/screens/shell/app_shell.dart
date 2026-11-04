@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/vehicle.dart';
 import '../../services/auth_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/responsive_layout.dart';
 import '../dashboard/dashboard_overview_screen.dart';
@@ -115,43 +116,56 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: isDesktop ? 24 : 16,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.shield_rounded, color: AppTheme.primaryBlue, size: 22),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                '${AppConstants.companyBrand} VMS',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, letterSpacing: 0.3),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'ENTERPRISE',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.6,
-                  color: AppTheme.primaryBlue,
+        title: Tooltip(
+          message: 'Go to Home (Dashboard)',
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _navigateToView(ShellView.dashboard),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppLogo(
+                      size: 32,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        '${AppConstants.companyBrand} VMS',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'ENTERPRISE',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.6,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
         actions: [
           // Theme mode toggle
@@ -505,36 +519,42 @@ class _AppShellState extends State<AppShell> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          InkWell(
+            onTap: () {
+              Navigator.pop(context);
+              _navigateToView(ShellView.dashboard);
+            },
+            child: DrawerHeader(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Icon(Icons.shield_rounded, color: Colors.white, size: 36),
-                const SizedBox(height: 12),
-                Text(
-                  '${AppConstants.companyBrand} VMS',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const AppLogo(size: 38, isDark: true),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${AppConstants.companyBrand} VMS',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  widget.authService.currentUser?.email ?? 'admin@starkgroup.com',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 12,
+                  Text(
+                    widget.authService.currentUser?.email ?? 'admin@starkgroup.com',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           ListTile(

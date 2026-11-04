@@ -12,3 +12,4 @@ abstract class SessionStorage {
 
   static final SessionStorage instance = createSessionStorage();
 }
+

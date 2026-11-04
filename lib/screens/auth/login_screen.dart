@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/app_logo.dart';
 
 /// Redesigned Split-Screen Authentication UI following Reference Image 2:
 /// Left panel: vibrant blue gradient, STARK GROUP VMS branding, shield emblem,
@@ -129,9 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
             color: isDark ? AppTheme.darkCard : Colors.white,
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: _buildAuthFormContent(theme, isDark),
                 ),
               ),
@@ -163,13 +164,9 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.shield_rounded, color: Colors.white, size: 28),
+                    const AppLogo(
+                      size: 40,
+                      isDark: true,
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -218,8 +215,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Form Card
           Padding(
-            padding: const EdgeInsets.all(24),
-            child: _buildAuthFormContent(theme, isDark),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: _buildAuthFormContent(theme, isDark),
+              ),
+            ),
           ),
         ],
       ),
@@ -284,137 +286,143 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
 
         // Hero Content
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 36),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-              // Logo & App Name
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        width: 1.2,
-                      ),
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: (constraints.maxHeight - 4).clamp(0.0, double.infinity),
                     ),
-                    child: const Center(
-                      child: Icon(Icons.shield_rounded, color: Colors.white, size: 26),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${AppConstants.companyBrand} VMS',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                        Text(
-                          'Vehicle Management System',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.75),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Main Headline & Value Proposition
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF34D399),
-                              shape: BoxShape.circle,
-                            ),
+                          // Logo & App Name
+                          Row(
+                            children: [
+                              const AppLogo(
+                                size: 46,
+                                isDark: true,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${AppConstants.companyBrand} VMS',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Vehicle Management System',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.75),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'ENTERPRISE FLEET SUITE 2.0',
+
+                          const SizedBox(height: 32),
+
+                          // Main Headline & Value Proposition
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF34D399),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'ENTERPRISE FLEET SUITE 2.0',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.6,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              const Text(
+                                'Real-Time Fleet Intelligence &\nAsset Lifecycle Operations',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.25,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'Unified corporate directory for vehicle allocation, inspection auditing, and automated compliance across all Stark Group subsidiaries.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Feature Badges
+                              _buildFeaturePill(Icons.verified_user_rounded, '100% Cloud Synchronized PostgreSQL'),
+                              const SizedBox(height: 12),
+                              _buildFeaturePill(Icons.speed_rounded, 'Real-time REST API CRUD with Spring Boot'),
+                              const SizedBox(height: 12),
+                              _buildFeaturePill(Icons.business_rounded, 'Multi-Entity Fleet Directory Support'),
+                            ],
+                          ),
+
+                          const Spacer(),
+                          const SizedBox(height: 24),
+
+                          // Footer Note
+                          Text(
+                            '© ${DateTime.now().year} Stark Group Industries. All operational rights reserved.',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.6,
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Real-Time Fleet Intelligence &\nAsset Lifecycle Operations',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Unified corporate directory for vehicle allocation, inspection auditing, and automated compliance across all Stark Group subsidiaries.',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Feature Badges
-                  _buildFeaturePill(Icons.verified_user_rounded, '100% Cloud Synchronized PostgreSQL'),
-                  const SizedBox(height: 12),
-                  _buildFeaturePill(Icons.speed_rounded, 'Real-time REST API CRUD with Spring Boot'),
-                  const SizedBox(height: 12),
-                  _buildFeaturePill(Icons.business_rounded, 'Multi-Entity Fleet Directory Support'),
-                ],
-              ),
-
-              // Footer Note
-              Text(
-                '© ${DateTime.now().year} Stark Group Industries. All operational rights reserved.',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
+                );
+              },
+            ),
           ),
         ),
       ],
