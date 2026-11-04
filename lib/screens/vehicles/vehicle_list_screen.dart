@@ -8,7 +8,8 @@ import '../../widgets/stat_card.dart';
 import '../../widgets/vehicle_status_badge.dart';
 
 /// Screen displaying the Stark Group fleet vehicle catalog with high-contrast
-/// scanning, highlighted Vehicle Number and Status, multi-dimensional filters, and actions.
+/// scanning, highlighted Vehicle Number and Status, multi-dimensional filters,
+/// loading, error, empty, and success states.
 class VehicleListScreen extends StatefulWidget {
   final VehicleService vehicleService;
   final VoidCallback onAddVehicle;
@@ -30,6 +31,18 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   VehicleStatus? _selectedStatus;
   VehicleType? _selectedType;
   String? _selectedCompany;
+  String? _deletingId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load initial real vehicle data from Spring Boot REST API
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.vehicleService.vehicles.isEmpty) {
+        widget.vehicleService.fetchVehicles();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -51,21 +64,36 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       context,
       title: 'Decommission Vehicle Record',
       message:
-          'Are you sure you want to delete vehicle "${vehicle.vehicleNumber}" (${vehicle.displayName}) assigned to ${vehicle.company}? This record will be permanently removed.',
+          'Are you sure you want to delete vehicle "${vehicle.vehicleNumber}" (${vehicle.displayName}) assigned to ${vehicle.company}? This change will be permanently applied to the SQL database.',
       confirmLabel: 'Delete Record',
       isDestructive: true,
     );
 
     if (confirmed == true && mounted) {
-      widget.vehicleService.deleteVehicle(vehicle.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Vehicle "${vehicle.vehicleNumber}" was deleted from fleet records.'),
-          backgroundColor: Colors.blueGrey.shade900,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() => _deletingId = vehicle.id);
+      try {
+        await widget.vehicleService.deleteVehicle(vehicle.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Vehicle "${vehicle.vehicleNumber}" was deleted from the database.'),
+            backgroundColor: Colors.blueGrey.shade900,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete vehicle: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _deletingId = null);
+      }
     }
   }
 
@@ -78,6 +106,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return ListenableBuilder(
       listenable: widget.vehicleService,
       builder: (context, _) {
+        final isLoading = widget.vehicleService.isLoading;
+        final hasError = widget.vehicleService.hasError;
         final totalCount = widget.vehicleService.totalCount;
         final activeCount = widget.vehicleService.activeCount;
         final maintenanceCount = widget.vehicleService.maintenanceCount;
@@ -106,7 +136,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Section Header & Action
+                    // Section Header & Actions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -124,7 +154,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Monitor operational readiness, corporate allocations, and asset statuses.',
+                                'Live operational data connected to Spring Boot backend.',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurface
                                       .withValues(alpha: 0.65),
@@ -133,17 +163,31 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                             ],
                           ),
                         ),
-                        if (!isMobile)
-                          ElevatedButton.icon(
-                            onPressed: widget.onAddVehicle,
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            label: const Text('Register Vehicle'),
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Refresh Button
+                            IconButton(
+                              icon: const Icon(Icons.refresh_rounded),
+                              tooltip: 'Refresh from API',
+                              onPressed: isLoading
+                                  ? null
+                                  : () => widget.vehicleService.fetchVehicles(),
+                            ),
+                            const SizedBox(width: 8),
+                            if (!isMobile)
+                              ElevatedButton.icon(
+                                onPressed: widget.onAddVehicle,
+                                icon: const Icon(Icons.add_rounded, size: 20),
+                                label: const Text('Register Vehicle'),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    // Executive Metric Cards
+                    // Top Executive Metric Cards
                     _buildStatCards(
                       totalCount: totalCount,
                       activeCount: activeCount,
@@ -310,8 +354,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Table / List View
-                    if (filteredVehicles.isEmpty)
+                    // Content View: Loading, Error, Empty, or Table List
+                    if (isLoading && widget.vehicleService.vehicles.isEmpty)
+                      _buildLoadingState(theme)
+                    else if (hasError && widget.vehicleService.vehicles.isEmpty)
+                      _buildErrorState(theme, widget.vehicleService.errorMessage!)
+                    else if (filteredVehicles.isEmpty)
                       _buildEmptyState(theme, hasActiveFilters)
                     else if (isMobile)
                       _buildMobileList(filteredVehicles, theme)
@@ -340,7 +388,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         value: totalCount.toString(),
         icon: Icons.directions_car_filled_rounded,
         color: const Color(0xFF0F172A),
-        subtitle: 'Registered corporate units',
+        subtitle: 'Registered in database',
       ),
       StatCard(
         title: 'Active Fleet',
@@ -388,6 +436,87 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             .toList(),
       );
     }
+  }
+
+  Widget _buildLoadingState(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(64),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(strokeWidth: 3),
+            const SizedBox(height: 20),
+            Text(
+              'Connecting to VMS REST Backend...',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Retrieving latest fleet assets from SQL database',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme, String errorMessage) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_off_rounded,
+                  size: 40,
+                  color: theme.colorScheme.error,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Backend Connection Error',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Text(
+                  errorMessage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => widget.vehicleService.fetchVehicles(),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry Connection'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildDesktopTable(List<Vehicle> vehicles, ThemeData theme) {
@@ -517,18 +646,25 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                         const SizedBox(width: 8),
                         Tooltip(
                           message: 'Delete Vehicle',
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: () => _handleDelete(v),
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.delete_outline_rounded,
-                                size: 20,
-                                color: theme.colorScheme.error,
-                              ),
-                            ),
-                          ),
+                          child: _deletingId == v.id
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => _handleDelete(v),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 20,
+                                      color: theme.colorScheme.error,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -635,12 +771,21 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                       label: const Text('Edit'),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(Icons.delete_outline_rounded,
-                          color: theme.colorScheme.error),
-                      tooltip: 'Delete Vehicle',
-                      onPressed: () => _handleDelete(v),
-                    ),
+                    _deletingId == v.id
+                        ? const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : IconButton(
+                            icon: Icon(Icons.delete_outline_rounded,
+                                color: theme.colorScheme.error),
+                            tooltip: 'Delete Vehicle',
+                            onPressed: () => _handleDelete(v),
+                          ),
                   ],
                 ),
               ],
@@ -683,7 +828,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
               child: Text(
                 hasActiveFilters
                     ? 'No vehicles match your active search terms or filter selections. Try broadening your criteria or reset the filters.'
-                    : 'There are currently no vehicles registered in the Stark Group fleet system.',
+                    : 'There are currently no vehicles registered in the database.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.65),

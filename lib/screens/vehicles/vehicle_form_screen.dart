@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/vehicle.dart';
+import '../../services/api_exception.dart';
 import '../../services/vehicle_service.dart';
 import '../../widgets/responsive_layout.dart';
 
@@ -38,6 +39,9 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
   late VehicleType _selectedType;
   late VehicleStatus _selectedStatus;
 
+  bool _isSaving = false;
+  String? _serverError;
+
   @override
   void initState() {
     super.initState();
@@ -63,56 +67,121 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
     super.dispose();
   }
 
-  void _saveVehicle() {
+  Future<void> _saveVehicle() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSaving) return;
+
+    setState(() {
+      _isSaving = true;
+      _serverError = null;
+    });
 
     final vehicleNumber = _numberController.text.trim().toUpperCase();
     final company = _companyController.text.trim();
     final brand = _brandController.text.trim();
     final model = _modelController.text.trim();
 
-    if (widget.isEditing) {
-      final updated = widget.initialVehicle!.copyWith(
-        vehicleNumber: vehicleNumber,
-        company: company,
-        type: _selectedType,
-        brand: brand,
-        model: model,
-        status: _selectedStatus,
-      );
-      widget.vehicleService.updateVehicle(updated);
+    try {
+      if (widget.isEditing) {
+        final updated = widget.initialVehicle!.copyWith(
+          vehicleNumber: vehicleNumber,
+          company: company,
+          type: _selectedType,
+          brand: brand,
+          model: model,
+          status: _selectedStatus,
+        );
+        await widget.vehicleService.updateVehicle(updated);
 
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Vehicle "$vehicleNumber" updated successfully.'),
+            backgroundColor: const Color(0xFF15803D),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        final newVehicle = Vehicle(
+          id: '',
+          vehicleNumber: vehicleNumber,
+          company: company,
+          type: _selectedType,
+          brand: brand,
+          model: model,
+          status: _selectedStatus,
+        );
+        await widget.vehicleService.addVehicle(newVehicle);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Vehicle "$vehicleNumber" was registered to the fleet.'),
+            backgroundColor: const Color(0xFF15803D),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      if (mounted) {
+        widget.onSaved();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      String userFriendlyMessage;
+      if (e.isDuplicate) {
+        userFriendlyMessage =
+            'Vehicle with number "$vehicleNumber" is already registered in the system. Please specify a unique vehicle identifier.';
+      } else if (e.isValidationError &&
+          e.validationErrors != null &&
+          e.validationErrors!.isNotEmpty) {
+        final formattedErrors = e.validationErrors!.entries
+            .map((entry) => '• ${entry.key}: ${entry.value}')
+            .join('\n');
+        userFriendlyMessage =
+            'Please correct the following validation errors:\n$formattedErrors';
+      } else if (e.statusCode == 404) {
+        userFriendlyMessage =
+            'The vehicle record was not found on the server. It may have been removed.';
+      } else {
+        userFriendlyMessage = e.message;
+      }
+
+      setState(() {
+        _serverError = userFriendlyMessage;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Vehicle "$vehicleNumber" updated successfully.'),
-          backgroundColor: const Color(0xFF15803D),
+          content: Text(
+            e.isDuplicate
+                ? 'Duplicate vehicle number "$vehicleNumber"'
+                : userFriendlyMessage.split('\n').first,
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } else {
-      final newVehicle = Vehicle(
-        id: 'veh-${DateTime.now().millisecondsSinceEpoch % 100000}',
-        vehicleNumber: vehicleNumber,
-        company: company,
-        type: _selectedType,
-        brand: brand,
-        model: model,
-        status: _selectedStatus,
-        updatedAt: DateTime.now(),
-      );
-      widget.vehicleService.addVehicle(newVehicle);
-
+    } catch (e) {
+      if (!mounted) return;
+      final errorMsg = 'Operation failed: $e';
+      setState(() {
+        _serverError = errorMsg;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Vehicle "$vehicleNumber" was registered to the fleet.'),
-          backgroundColor: const Color(0xFF15803D),
+          content: Text(errorMsg),
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
-
-    widget.onSaved();
   }
 
   @override
@@ -173,6 +242,70 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
+                      // Server Error Alert Banner
+                      if (_serverError != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.error
+                                  .withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.error_outline_rounded,
+                                color: theme.colorScheme.error,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Backend Error',
+                                      style:
+                                          theme.textTheme.titleSmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onErrorContainer,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _serverError!,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onErrorContainer,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.onErrorContainer,
+                                ),
+                                tooltip: 'Dismiss',
+                                onPressed: () =>
+                                    setState(() => _serverError = null),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+
                       // GROUP 1: Identification & Company Assignment
                       Card(
                         child: Padding(
@@ -319,16 +452,31 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           OutlinedButton(
-                            onPressed: widget.onCancel,
+                            onPressed: _isSaving ? null : widget.onCancel,
                             child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 16),
-                          ElevatedButton.icon(
-                            onPressed: _saveVehicle,
-                            icon: const Icon(Icons.check_rounded, size: 18),
-                            label: Text(widget.isEditing
-                                ? 'Save Changes'
-                                : 'Register Vehicle'),
+                          ElevatedButton(
+                            onPressed: _isSaving ? null : _saveVehicle,
+                            child: _isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.check_rounded, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(widget.isEditing
+                                          ? 'Save Changes'
+                                          : 'Register Vehicle'),
+                                    ],
+                                  ),
                           ),
                         ],
                       ),

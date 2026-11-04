@@ -20,13 +20,22 @@ class VmsApp extends StatefulWidget {
 }
 
 class _VmsAppState extends State<VmsApp> {
-  // In-memory services for authentication and vehicle fleet operations.
-  // When integrating with the Java Spring Boot backend later, replace these
-  // with REST client implementations.
-  final AuthService _authService = AuthService();
-  final VehicleService _vehicleService = VehicleService();
+  late final AuthService _authService;
+  late final VehicleService _vehicleService;
   final ValueNotifier<ThemeMode> _themeModeNotifier =
       ValueNotifier<ThemeMode>(ThemeMode.light);
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = AuthService();
+    _vehicleService = VehicleService(authService: _authService);
+  }
+
+  void _handleLogout() {
+    _vehicleService.clearCache();
+    setState(() {});
+  }
 
   @override
   void dispose() {
@@ -55,7 +64,7 @@ class _VmsAppState extends State<VmsApp> {
                       authService: _authService,
                       vehicleService: _vehicleService,
                       themeModeNotifier: _themeModeNotifier,
-                      onLogout: () => setState(() {}),
+                      onLogout: _handleLogout,
                     )
                   : LoginScreen(
                       authService: _authService,

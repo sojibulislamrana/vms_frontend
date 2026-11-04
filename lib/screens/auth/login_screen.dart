@@ -47,7 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
       widget.onLoginSuccess();
     } else {
       setState(() {
-        _errorMessage = 'Authentication failed. Please verify credentials.';
+        _errorMessage = widget.authService.errorMessage ??
+            'Authentication failed. Please verify credentials.';
       });
     }
   }

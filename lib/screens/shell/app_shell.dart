@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/vehicle.dart';
 import '../../services/auth_service.dart';
@@ -256,38 +257,49 @@ class _AppShellState extends State<AppShell> {
           const Divider(),
 
           // System info footer
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          ListenableBuilder(
+            listenable: widget.vehicleService,
+            builder: (context, _) {
+              final connected = widget.vehicleService.isBackendConnected;
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A),
-                        shape: BoxShape.circle,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: connected
+                                ? const Color(0xFF16A34A)
+                                : Colors.amber.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          connected ? 'Spring Boot Online' : 'REST API Ready',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Stark Local Engine',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    const SizedBox(height: 4),
+                    Text(
+                      ApiConstants.baseUrl,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'In-Memory Mode (Zero Network)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
