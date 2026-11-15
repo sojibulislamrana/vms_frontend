@@ -10,10 +10,12 @@ import 'api_exception.dart';
 class VehicleApiClient {
   final http.Client _client;
   final String? Function()? tokenProvider;
+  final String? Function()? workspaceIdProvider;
 
   VehicleApiClient({
     http.Client? client,
     this.tokenProvider,
+    this.workspaceIdProvider,
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers {
@@ -24,6 +26,10 @@ class VehicleApiClient {
     final token = tokenProvider?.call();
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
+    }
+    final workspaceId = workspaceIdProvider?.call();
+    if (workspaceId != null && workspaceId.isNotEmpty) {
+      headers['X-Workspace-ID'] = workspaceId;
     }
     return headers;
   }

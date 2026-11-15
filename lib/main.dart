@@ -1,25 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/password_reset_screen.dart';
+import 'screens/auth/workspace_setup_screen.dart';
+import 'screens/marketing/marketing_home_screen.dart';
 import 'screens/shell/app_shell.dart';
 import 'services/auth_service.dart';
 import 'services/vehicle_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const VmsApp());
+  const supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: String.fromEnvironment('NEXT_PUBLIC_SUPABASE_URL'),
+  );
+  const supabaseKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: String.fromEnvironment('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+  );
+  SupabaseClient? supabaseClient;
+  final resetPasswordRoute = Uri.base.queryParameters['mode'] == 'reset-password';
+  if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
+    await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
+    supabaseClient = Supabase.instance.client;
+  }
+  runApp(VmsApp(supabaseClient: supabaseClient, resetPasswordRoute: resetPasswordRoute));
 }
 
 /// The root widget of the Vehicle Management System frontend application.
 class VmsApp extends StatefulWidget {
-  const VmsApp({super.key});
+  final SupabaseClient? supabaseClient;
+  final bool resetPasswordRoute;
+
+  const VmsApp({super.key, this.supabaseClient, this.resetPasswordRoute = false});
 
   @override
   State<VmsApp> createState() => _VmsAppState();
 }
 
 class _VmsAppState extends State<VmsApp> {
+  bool _passwordResetComplete = false;
   late final AuthService _authService;
   late final VehicleService _vehicleService;
   final ValueNotifier<ThemeMode> _themeModeNotifier =
@@ -28,7 +50,7 @@ class _VmsAppState extends State<VmsApp> {
   @override
   void initState() {
     super.initState();
-    _authService = AuthService();
+    _authService = AuthService(client: widget.supabaseClient);
     _vehicleService = VehicleService(authService: _authService);
   }
 
@@ -59,6 +81,31 @@ class _VmsAppState extends State<VmsApp> {
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeMode,
+              home: widget.resetPasswordRoute && !_passwordResetComplete
+                  ? PasswordResetScreen(authService: _authService, onComplete: () => setState(() => _passwordResetComplete = true))
+                  : _authService.hasSession
+                  ? (_authService.isWorkspaceLoading
+                      ? const _LoadingHome()
+                      : (_authService.workspaceId == null
+                          ? WorkspaceSetupScreen(authService: _authService)
+                          : AppShell(
+                      authService: _authService,
+                      vehicleService: _vehicleService,
+                      themeModeNotifier: _themeModeNotifier,
+                      onLogout: _handleLogout,
+                    )))
+                  : const MarketingHomeScreen(),
+              routes: {
+                '/login': (context) => LoginScreen(
+                      authService: _authService,
+                      onLoginSuccess: () => Navigator.of(context).pop(),
+                    ),
+                '/signup': (context) => LoginScreen(
+                      authService: _authService,
+                      startingOnSignUp: true,
+                      onLoginSuccess: () => Navigator.of(context).pop(),
+                    ),
+              },
               onGenerateRoute: (settings) {
                 return MaterialPageRoute(
                   settings: settings,
@@ -70,10 +117,7 @@ class _VmsAppState extends State<VmsApp> {
                           onLogout: _handleLogout,
                           initialRoute: settings.name,
                         )
-                      : LoginScreen(
-                          authService: _authService,
-                          onLoginSuccess: () => setState(() {}),
-                        ),
+                      : const MarketingHomeScreen(),
                 );
               },
             );
@@ -82,4 +126,14 @@ class _VmsAppState extends State<VmsApp> {
       },
     );
   }
+}
+
+class _LoadingHome extends StatelessWidget {
+  const _LoadingHome();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+        backgroundColor: Color(0xFFF6F6F1),
+        body: Center(child: SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF315E4B)))),
+      );
 }

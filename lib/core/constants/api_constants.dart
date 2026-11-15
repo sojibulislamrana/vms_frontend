@@ -22,6 +22,8 @@ class ApiConstants {
   /// Raw base URL of the Spring Boot backend server.
   static const String _rawBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
+    // Same-origin proxy is useful for local Vercel-style development. Set the
+    // production API hostname with --dart-define=API_BASE_URL=... at build time.
     defaultValue: 'http://localhost:8080',
   );
 

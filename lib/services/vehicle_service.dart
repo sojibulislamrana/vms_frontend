@@ -17,8 +17,13 @@ class VehicleService extends ChangeNotifier {
 
   VehicleService({
     VehicleApiClient? apiClient,
-    this.authService,
-  }) : _apiClient = apiClient ?? VehicleApiClient();
+    AuthService? authService,
+  })  : authService = authService,
+        _apiClient = apiClient ??
+            VehicleApiClient(
+              tokenProvider: () => authService?.token,
+              workspaceIdProvider: () => authService?.workspaceId,
+            );
 
   /// Unmodifiable view of currently loaded vehicles.
   List<Vehicle> get vehicles => List.unmodifiable(_vehicles);

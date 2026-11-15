@@ -64,10 +64,10 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   Future<void> _handleDelete(Vehicle vehicle) async {
     final confirmed = await ConfirmationDialog.show(
       context,
-      title: 'Decommission Vehicle Record',
+      title: 'Remove this vehicle?',
       message:
-          'Are you sure you want to delete vehicle "${vehicle.vehicleNumber}" (${vehicle.displayName}) assigned to ${vehicle.company}? This change will be permanently applied to the SQL database.',
-      confirmLabel: 'Delete Record',
+          'Remove ${vehicle.vehicleNumber} (${vehicle.displayName}) from this workspace?',
+      confirmLabel: 'Remove vehicle',
       isDestructive: true,
     );
 
@@ -79,7 +79,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Vehicle "${vehicle.vehicleNumber}" was deleted from the database.'),
+                'Vehicle "${vehicle.vehicleNumber}" was removed.'),
             backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
           ),

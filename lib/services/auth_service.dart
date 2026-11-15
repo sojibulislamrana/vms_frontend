@@ -1,285 +1,219 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/api_constants.dart';
-import '../core/storage/session_storage.dart';
 import '../models/user.dart';
-import 'vehicle_api_client.dart';
 
-/// Manages authentication state and session for the Stark Group admin console.
-/// Supports corporate credential login, verified Google Sign-In, and automatic
-/// session restoration via browser cookies and localStorage across reloads.
+/// Authentication adapter for Supabase Auth. Passwords never pass through VMS.
 class AuthService extends ChangeNotifier {
-  final VehicleApiClient _apiClient;
-  final http.Client _httpClient;
+  AuthService({SupabaseClient? client}) : _client = client {
+    if (client != null) {
+      _currentUser = _mapUser(client.auth.currentUser);
+      _authSubscription = client.auth.onAuthStateChange.listen((event) {
+        _currentUser = _mapUser(event.session?.user);
+        _errorMessage = null;
+        _workspaceId = null;
+        if (event.session != null) unawaited(loadWorkspace());
+        notifyListeners();
+      });
+      if (client.auth.currentSession != null) unawaited(loadWorkspace());
+    }
+  }
 
+  final SupabaseClient? _client;
+  final http.Client _httpClient = http.Client();
+  StreamSubscription<AuthState>? _authSubscription;
   AppUser? _currentUser;
+  String? _workspaceId;
+  String _subscriptionStatus = 'starter';
+  bool _isWorkspaceLoading = false;
   bool _isLoading = false;
   String? _errorMessage;
-  bool _backendReachable = false;
+  String? _infoMessage;
 
-  AuthService({
-    VehicleApiClient? apiClient,
-    http.Client? httpClient,
-    bool autoRestore = true,
-  })  : _apiClient = apiClient ?? VehicleApiClient(),
-        _httpClient = httpClient ?? http.Client() {
-    if (autoRestore) {
-      restoreSession();
-    }
-  }
-
-  AppUser? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isConfigured => _client != null;
+  bool get hasSession => _client?.auth.currentSession != null;
+  bool get isAuthenticated => hasSession && _workspaceId != null;
+  String? get workspaceId => _workspaceId;
+  String get subscriptionStatus => _subscriptionStatus;
+  bool get isWorkspaceLoading => _isWorkspaceLoading;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get backendReachable => _backendReachable;
-  String? get token => _currentUser?.token;
+  String? get infoMessage => _infoMessage;
+  AppUser? get currentUser => _currentUser;
+  String? get token => _client?.auth.currentSession?.accessToken;
 
-  /// Restores session state from browser cookies or storage
-  bool restoreSession() {
-    try {
-      final saved = SessionStorage.instance.getSession();
-      if (saved != null && saved.trim().isNotEmpty) {
-        final data = jsonDecode(saved) as Map<String, dynamic>;
-        _currentUser = AppUser.fromJson(data);
-        notifyListeners();
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  void _persistCurrentSession() {
-    if (_currentUser != null) {
-      try {
-        final jsonStr = jsonEncode(_currentUser!.toJson());
-        SessionStorage.instance.saveSession(jsonStr);
-      } catch (_) {}
-    }
-  }
-
-  /// Standard login with corporate credentials.
-  /// Calls backend /api/auth/login with graceful client fallback.
   Future<bool> login({required String email, required String password}) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final cleanEmail = email.trim().toLowerCase();
-      final cleanPassword = password.trim();
-
-      if (cleanEmail.isEmpty) {
-        _errorMessage = 'Corporate email is required.';
-        return false;
-      }
-
-      if (cleanPassword.isEmpty) {
-        _errorMessage = 'Access key / password is required.';
-        return false;
-      }
-
-      // Check backend health
-      try {
-        _backendReachable = await _apiClient.checkHealth();
-      } catch (_) {
-        _backendReachable = false;
-      }
-
-      // Attempt remote authentication via backend endpoint
-      if (_backendReachable) {
-        try {
-          final loginUrl = Uri.parse('${ApiConstants.baseUrl}/api/auth/login');
-          final response = await _httpClient.post(
-            loginUrl,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': cleanEmail, 'password': cleanPassword}),
-          ).timeout(const Duration(seconds: 4));
-
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body) as Map<String, dynamic>;
-            _currentUser = AppUser(
-              id: data['id']?.toString() ?? 'usr-${cleanEmail.hashCode.abs()}',
-              email: data['email']?.toString() ?? cleanEmail,
-              name: data['name']?.toString() ?? 'Tony Stark',
-              role: data['role']?.toString() ?? 'Fleet Administrator',
-              token: data['token']?.toString() ?? 'stk_jwt_${DateTime.now().millisecondsSinceEpoch}',
-              avatarUrl: data['avatarUrl']?.toString(),
-              authProvider: 'LOCAL',
-            );
-            _persistCurrentSession();
-            _errorMessage = null;
-            return true;
-          }
-        } catch (_) {
-          // If remote endpoint is unavailable, proceed with validated local policy
-        }
-      }
-
-      // Validate corporate credentials against Stark enterprise policy
-      final isDemoAdmin =
-          cleanEmail == 'admin@starkgroup.com' && cleanPassword == 'stark123';
-      final isCorporateDomain =
-          cleanEmail.endsWith('@starkgroup.com') && cleanPassword.length >= 6;
-
-      if (!isDemoAdmin && !isCorporateDomain) {
-        _errorMessage =
-            'Invalid corporate credentials. Please use Stark Demo Credentials or an authorized @starkgroup.com account.';
-        return false;
-      }
-
-      final namePrefix = cleanEmail.split('@').first.replaceAll('.', ' ');
-      final displayName = isDemoAdmin
-          ? 'Tony Stark'
-          : namePrefix
-              .split(' ')
-              .map((w) =>
-                  w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
-              .join(' ');
-
-      _currentUser = AppUser(
-        id: 'usr-${cleanEmail.hashCode.abs()}',
-        email: cleanEmail,
-        name: displayName.isNotEmpty ? displayName : 'Fleet Admin',
-        role: isDemoAdmin ? 'Fleet Director' : 'Fleet Administrator',
-        token: 'stk_sess_${DateTime.now().millisecondsSinceEpoch}',
-        authProvider: 'LOCAL',
+    return _run(() async {
+      if (email.trim().isEmpty) throw const AuthException('Enter your email address.');
+      if (password.isEmpty) throw const AuthException('Enter your password.');
+      await _requireClient().auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
       );
-
-      _persistCurrentSession();
-      _errorMessage = null;
+      await loadWorkspace();
       return true;
-    } catch (e) {
-      _errorMessage = 'An error occurred during sign in: $e';
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
-  /// Authenticate using Google Sign-In with backend token exchange.
-  Future<bool> signInWithGoogle({
-    String? email,
-    String? name,
-    String? avatarUrl,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final targetEmail = email ?? 'tony.stark@starkgroup.com';
-      final targetName = name ?? 'Tony Stark';
-      final targetAvatar = avatarUrl ??
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
-      final idToken = 'google_oauth_${DateTime.now().millisecondsSinceEpoch}_${targetEmail.hashCode.abs()}';
-
-      // Attempt verification with the Spring Boot backend
-      try {
-        final verifyUrl = Uri.parse('${ApiConstants.baseUrl}/api/auth/google');
-        final response = await _httpClient.post(
-          verifyUrl,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'idToken': idToken,
-            'email': targetEmail,
-            'name': targetName,
-            'avatarUrl': targetAvatar,
-          }),
-        ).timeout(const Duration(seconds: 4));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          _currentUser = AppUser(
-            id: data['id']?.toString() ?? 'usr-${targetEmail.hashCode.abs()}',
-            email: data['email']?.toString() ?? targetEmail,
-            name: data['name']?.toString() ?? targetName,
-            role: data['role']?.toString() ?? 'Fleet Administrator',
-            token: data['token']?.toString() ?? 'stk_g_$idToken',
-            avatarUrl: data['avatarUrl']?.toString() ?? targetAvatar,
-            authProvider: 'GOOGLE',
-          );
-          _persistCurrentSession();
-          _errorMessage = null;
-          return true;
-        }
-      } catch (_) {
-        // Fallback to local verified Google session if backend endpoint is unreachable
-      }
-
-      _currentUser = AppUser(
-        id: 'usr-g-${targetEmail.hashCode.abs()}',
-        email: targetEmail,
-        name: targetName,
-        role: 'Fleet Administrator',
-        token: 'stk_google_token_$idToken',
-        avatarUrl: targetAvatar,
-        authProvider: 'GOOGLE',
-      );
-
-      _persistCurrentSession();
-      _errorMessage = null;
-      return true;
-    } catch (e) {
-      _errorMessage = 'Google Sign-In failed: $e';
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Register a new corporate user account.
   Future<bool> register({
     required String name,
     required String email,
     required String password,
   }) async {
+    return _run(() async {
+      if (name.trim().isEmpty) throw const AuthException('Enter your name.');
+      if (email.trim().isEmpty || !email.contains('@')) throw const AuthException('Enter a valid email address.');
+      if (password.length < 8) throw const AuthException('Use at least 8 characters for your password.');
+      final response = await _requireClient().auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {'full_name': name.trim()},
+        emailRedirectTo: kIsWeb ? Uri.base.origin : null,
+      );
+      if (response.session == null) {
+        _infoMessage = 'Check your inbox to verify your email, then come back to sign in.';
+        return false;
+      }
+      await loadWorkspace();
+      return true;
+    });
+  }
+
+  Future<bool> signInWithGoogle() async {
+    return _run(() async {
+      try {
+        await _requireClient().auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: kIsWeb ? Uri.base.origin : null,
+        );
+      } on AuthException catch (error) {
+        final message = error.message.toLowerCase();
+        if (message.contains('provider is not enabled') ||
+            message.contains('unsupported provider')) {
+          throw const AuthException(
+            'Google sign-in needs to be enabled in Supabase Authentication → Sign In / Providers with a Google OAuth client.',
+          );
+        }
+        rethrow;
+      }
+      // The browser navigates to Google and returns through Supabase Auth.
+      return true;
+    });
+  }
+
+  Future<bool> sendPasswordReset(String email) async {
+    return _run(() async {
+      await _requireClient().auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: kIsWeb ? '${Uri.base.origin}/?mode=reset-password' : null,
+      );
+      _infoMessage = 'Password reset instructions are on their way if this address is registered.';
+      return true;
+    });
+  }
+
+  Future<bool> updatePassword(String password) async {
+    return _run(() async {
+      if (password.length < 8) throw const AuthException('Use at least 8 characters for your password.');
+      await _requireClient().auth.updateUser(UserAttributes(password: password));
+      _infoMessage = 'Your password has been updated.';
+      return true;
+    });
+  }
+
+  Future<void> loadWorkspace() async {
+    final token = _client?.auth.currentSession?.accessToken;
+    if (token == null) return;
+    _isWorkspaceLoading = true;
+    notifyListeners();
+    try {
+      final response = await _httpClient.get(
+        Uri.parse('${ApiConstants.baseUrl}/api/v1/workspaces/current'),
+        headers: _sessionHeaders(token),
+      ).timeout(ApiConstants.requestTimeout);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        _workspaceId = data['id']?.toString();
+        _subscriptionStatus = data['subscriptionStatus']?.toString() ?? 'starter';
+        _errorMessage = null;
+      } else if (response.statusCode != 404) {
+        _errorMessage = _apiError(response.body, response.statusCode);
+      }
+    } catch (_) {
+      _errorMessage = 'Could not reach your workspace service. Check that the VMS API is running.';
+    } finally {
+      _isWorkspaceLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createWorkspace(String name) async {
+    return _run(() async {
+      final token = _client?.auth.currentSession?.accessToken;
+      if (token == null) throw const AuthException('Sign in again to create a workspace.');
+      final response = await _httpClient.post(
+        Uri.parse('${ApiConstants.baseUrl}/api/v1/workspaces'),
+        headers: _sessionHeaders(token),
+        body: jsonEncode({'name': name.trim()}),
+      ).timeout(ApiConstants.requestTimeout);
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw AuthException(_apiError(response.body, response.statusCode));
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _workspaceId = data['id']?.toString();
+      _subscriptionStatus = data['subscriptionStatus']?.toString() ?? 'starter';
+      if (_workspaceId == null) throw const AuthException('Workspace was created, but its ID was missing.');
+      return true;
+    });
+  }
+
+  Map<String, String> _sessionHeaders(String token) => {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+  String _apiError(String body, int status) {
+    try {
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      return data['message']?.toString() ?? data['error']?.toString() ?? 'Request failed ($status).';
+    } catch (_) {
+      return 'Request failed ($status).';
+    }
+  }
+
+  Future<void> logout() async {
+    await _client?.auth.signOut();
+    _currentUser = null;
+    _workspaceId = null;
+    notifyListeners();
+  }
+
+  SupabaseClient _requireClient() {
+    final client = _client;
+    if (client == null) {
+      throw const AuthException(
+        'Authentication is not configured. Add the Supabase project URL and publishable key to the local run configuration.',
+      );
+    }
+    return client;
+  }
+
+  Future<bool> _run(Future<bool> Function() action) async {
     _isLoading = true;
     _errorMessage = null;
+    _infoMessage = null;
     notifyListeners();
-
     try {
-      final cleanName = name.trim();
-      final cleanEmail = email.trim().toLowerCase();
-      final cleanPassword = password.trim();
-
-      if (cleanName.isEmpty) {
-        _errorMessage = 'Full name is required.';
-        return false;
-      }
-
-      if (cleanEmail.isEmpty) {
-        _errorMessage = 'Corporate email is required.';
-        return false;
-      }
-
-      if (!cleanEmail.contains('@') || !cleanEmail.contains('.')) {
-        _errorMessage = 'Please provide a valid corporate email address.';
-        return false;
-      }
-
-      if (cleanPassword.length < 6) {
-        _errorMessage = 'Password must be at least 6 characters.';
-        return false;
-      }
-
-      _currentUser = AppUser(
-        id: 'usr-${cleanEmail.hashCode.abs()}',
-        email: cleanEmail,
-        name: cleanName,
-        role: 'Fleet Administrator',
-        token: 'stk_sess_${DateTime.now().millisecondsSinceEpoch}',
-        authProvider: 'LOCAL',
-      );
-
-      _persistCurrentSession();
-      _errorMessage = null;
-      return true;
-    } catch (e) {
-      _errorMessage = 'Registration failed: $e';
+      return await action();
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (error) {
+      _errorMessage = error.toString().replaceFirst('Exception: ', '');
       return false;
     } finally {
       _isLoading = false;
@@ -287,13 +221,33 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Sign out the current user and destroy active session state and cookies.
-  void logout() {
-    _currentUser = null;
+  AppUser? _mapUser(User? user) {
+    if (user == null) return null;
+    final metadata = user.userMetadata ?? const <String, dynamic>{};
+    final identities = user.appMetadata['provider']?.toString() ?? 'email';
+    return AppUser(
+      id: user.id,
+      email: user.email ?? '',
+      name: metadata['full_name']?.toString() ??
+          metadata['name']?.toString() ??
+          (user.email?.split('@').first ?? 'Fleet manager'),
+      role: 'Workspace owner',
+      token: _client?.auth.currentSession?.accessToken,
+      avatarUrl: metadata['avatar_url']?.toString(),
+      authProvider: identities.toUpperCase(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _httpClient.close();
+    super.dispose();
+  }
+
+  void clearMessages() {
     _errorMessage = null;
-    try {
-      SessionStorage.instance.clearSession();
-    } catch (_) {}
+    _infoMessage = null;
     notifyListeners();
   }
 }

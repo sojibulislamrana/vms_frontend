@@ -8,9 +8,7 @@ import '../../widgets/stat_card.dart';
 import '../../widgets/vehicle_image.dart';
 import '../../widgets/vehicle_status_badge.dart';
 
-/// Main Dashboard Overview Screen following Reference Image 2:
-/// Four attractive SaaS summary cards with tinted backgrounds, operational readiness
-/// metrics, fleet distribution charts, and a featured recent vehicles showcase.
+/// Workspace overview with fleet totals, status breakdown and recent vehicles.
 class DashboardOverviewScreen extends StatelessWidget {
   final VehicleService vehicleService;
   final AuthService authService;
@@ -92,7 +90,7 @@ class DashboardOverviewScreen extends StatelessWidget {
 
   /// Dashboard Header with Greeting and Quick Action Buttons
   Widget _buildHeader(BuildContext context, ThemeData theme, bool isDark) {
-    final userName = authService.currentUser?.name ?? 'Tony Stark';
+    final userName = authService.currentUser?.name ?? 'there';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -113,7 +111,7 @@ class DashboardOverviewScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Live fleet operations, health telemetry, and vehicle inventory.',
+                'A quick look at your fleet and the work ahead.',
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),

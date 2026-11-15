@@ -1,30 +1,27 @@
 import 'package:flutter/material.dart';
 
-/// Centralized Material 3 theme configuration for the Stark Group VMS Admin application.
-/// Provides a clean, minimal, premium SaaS dashboard aesthetic following Reference Image 2:
-/// Vibrant blue branding, crisp white surfaces, subtle light-gray backgrounds, refined borders,
-/// and polished interactive components in both light and dark modes.
+/// Centralized Material 3 theme for Stark Fleet.
 class AppTheme {
   AppTheme._();
 
-  // Premium SaaS Brand Palette (Blue Dominant)
-  static const Color primaryBlue = Color(0xFF2563EB); // Vibrant Royal Blue (Primary)
-  static const Color primaryBlueDark = Color(0xFF1D4ED8); // Hover / Focused Blue
-  static const Color primaryBlueLight = Color(0xFFEFF6FF); // Soft Blue Tint for active states
-  static const Color accentSky = Color(0xFF0284C7); // Electric Cyan Accent
-  static const Color slateNavy = Color(0xFF0F172A); // Deep Slate Navy for headings
+  // Quiet forest green and warm mineral palette.
+  static const Color primaryBlue = Color(0xFF315E4B);
+  static const Color primaryBlueDark = Color(0xFF274B3B);
+  static const Color primaryBlueLight = Color(0xFFE8EEE7);
+  static const Color accentSky = Color(0xFF8A956A);
+  static const Color slateNavy = Color(0xFF202720);
 
   // Light Mode Surfaces & Borders
-  static const Color lightBg = Color(0xFFF8FAFC); // Subtle Gray Background
+  static const Color lightBg = Color(0xFFF6F6F1);
   static const Color lightCard = Colors.white;
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightBorderHover = Color(0xFFCBD5E1);
+  static const Color lightBorder = Color(0xFFE4E6DE);
+  static const Color lightBorderHover = Color(0xFFD0D5CC);
 
   // Dark Mode Carbon Palette
   static const Color darkBg = Color(0xFF0B0F19);
   static const Color darkCard = Color(0xFF151D2A);
   static const Color darkBorder = Color(0xFF222F43);
-  static const Color darkPrimary = Color(0xFF3B82F6);
+  static const Color darkPrimary = Color(0xFF8BB29A);
 
   // Status Colors (Matching Reference Specs)
   static const Color statusActiveGreen = Color(0xFF16A34A);
@@ -156,7 +153,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: darkPrimary,
       primary: darkPrimary,
-      secondary: const Color(0xFF38BDF8),
+      secondary: const Color(0xFFA9B58E),
       brightness: Brightness.dark,
       surface: darkCard,
     );

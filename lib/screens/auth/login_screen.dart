@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/theme/app_theme.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/app_logo.dart';
 
-/// Redesigned Split-Screen Authentication UI following Reference Image 2:
-/// Left panel: vibrant blue gradient, STARK GROUP VMS branding, shield emblem,
-/// geometric decorations, and enterprise feature highlights.
-/// Right panel: clean white authentication form with "Continue with Google",
-/// modern input fields, Sign In / Register toggle, and Stark Demo credentials.
+const _authInk = Color(0xFF202720);
+const _authMuted = Color(0xFF737A72);
+const _authGreen = Color(0xFF315E4B);
+const _authPaper = Color(0xFFF6F6F1);
+
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, required this.authService, required this.onLoginSuccess, this.startingOnSignUp = false});
   final AuthService authService;
   final VoidCallback onLoginSuccess;
-
-  const LoginScreen({
-    super.key,
-    required this.authService,
-    required this.onLoginSuccess,
-  });
+  final bool startingOnSignUp;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -26,12 +19,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController(text: 'admin@starkgroup.com');
-  final _passwordController = TextEditingController(text: 'stark123');
-
-  bool _isRegistering = false;
-  bool _obscurePassword = true;
-  String? _errorMessage;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  late bool _isRegistering = widget.startingOnSignUp;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -41,818 +32,156 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleAuth() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _errorMessage = null);
-
     final success = _isRegistering
-        ? await widget.authService.register(
-            name: _nameController.text,
-            email: _emailController.text,
-            password: _passwordController.text,
-          )
-        : await widget.authService.login(
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
-
+        ? await widget.authService.register(name: _nameController.text, email: _emailController.text, password: _passwordController.text)
+        : await widget.authService.login(email: _emailController.text, password: _passwordController.text);
     if (!mounted) return;
-
-    if (success) {
-      widget.onLoginSuccess();
-    } else {
-      setState(() {
-        _errorMessage = widget.authService.errorMessage ??
-            'Authentication failed. Please verify your credentials.';
-      });
-    }
+    if (success) widget.onLoginSuccess();
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _errorMessage = null);
-
-    final success = await widget.authService.signInWithGoogle(
-      email: 'tony.stark@starkgroup.com',
-      name: 'Tony Stark',
-      avatarUrl:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    );
-
-    if (!mounted) return;
-
-    if (success) {
-      widget.onLoginSuccess();
-    } else {
-      setState(() {
-        _errorMessage = widget.authService.errorMessage ??
-            'Google Sign-In failed. Please try again.';
-      });
-    }
+  Future<void> _google() async {
+    await widget.authService.signInWithGoogle();
+    if (mounted && widget.authService.isAuthenticated) widget.onLoginSuccess();
   }
 
-  void _fillDemoCredentials() {
-    setState(() {
-      _isRegistering = false;
-      _emailController.text = 'admin@starkgroup.com';
-      _passwordController.text = 'stark123';
-      _errorMessage = null;
-    });
+  Future<void> _resetPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter your email address first.')));
+      return;
+    }
+    await widget.authService.sendPasswordReset(_emailController.text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width >= 750;
-
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
-      body: isDesktop ? _buildDesktopLayout(theme, isDark) : _buildMobileLayout(theme, isDark),
-    );
-  }
-
-  /// Split-Screen Layout for Desktop and Large Tablets
-  Widget _buildDesktopLayout(ThemeData theme, bool isDark) {
-    return Row(
-      children: [
-        // Left Branding & Decorative Hero Panel
-        Expanded(
-          flex: 5,
-          child: _buildLeftHeroPanel(),
-        ),
-
-        // Right Authentication Form Surface
-        Expanded(
-          flex: 6,
-          child: Container(
-            color: isDark ? AppTheme.darkCard : Colors.white,
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: _buildAuthFormContent(theme, isDark),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Responsive Single-Column Layout for Mobile and Compact Screens
-  Widget _buildMobileLayout(ThemeData theme, bool isDark) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Compact Hero Header Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB), Color(0xFF3B82F6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const AppLogo(
-                      size: 40,
-                      isDark: true,
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${AppConstants.companyBrand} VMS',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          'Vehicle Management System',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Fleet Intelligence & Operations',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Enterprise vehicle lifecycle tracking across Stark subsidiaries.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Form Card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: _buildAuthFormContent(theme, isDark),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Left Panel with vibrant blue background and subtle geometric decorations
-  Widget _buildLeftHeroPanel() {
-    return Stack(
-      children: [
-        // Background Gradient
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF1E3A8A), // Deep Royal Blue
-                Color(0xFF2563EB), // Primary Blue
-                Color(0xFF1D4ED8), // Vibrant Blue
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-
-        // Geometric Decorative Elements
-        Positioned(
-          top: -100,
-          right: -100,
-          child: Container(
-            width: 320,
-            height: 320,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.05),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -60,
-          left: -60,
-          child: Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.04),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 240,
-          left: 40,
-          child: Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF60A5FA).withValues(alpha: 0.08),
-            ),
-          ),
-        ),
-
-        // Hero Content
-        Positioned.fill(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: (constraints.maxHeight - 4).clamp(0.0, double.infinity),
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Logo & App Name
-                          Row(
+      backgroundColor: _authPaper,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(22),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1060),
+              child: LayoutBuilder(builder: (context, constraints) {
+                final wide = constraints.maxWidth > 900;
+                return Container(
+                  decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4E6DE)), borderRadius: BorderRadius.circular(18), boxShadow: const [BoxShadow(color: Color(0x0D18221A), blurRadius: 35, offset: Offset(0, 15))]),
+                  clipBehavior: Clip.antiAlias,
+                  child: wide
+                      ? IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const AppLogo(
-                                size: 46,
-                                isDark: true,
-                              ),
-                              const SizedBox(width: 14),
+                              Expanded(flex: 5, child: _welcomePanel()),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${AppConstants.companyBrand} VMS',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.6,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Vehicle Management System',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.75),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                                flex: 6,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 46),
+                                  child: _formPanel(),
                                 ),
                               ),
                             ],
                           ),
-
-                          const SizedBox(height: 32),
-
-                          // Main Headline & Value Proposition
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFF34D399),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'ENTERPRISE FLEET SUITE 2.0',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.6,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              const Text(
-                                'Real-Time Fleet Intelligence &\nAsset Lifecycle Operations',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.25,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                'Unified corporate directory for vehicle allocation, inspection auditing, and automated compliance across all Stark Group subsidiaries.',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 14,
-                                  height: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Feature Badges
-                              _buildFeaturePill(Icons.verified_user_rounded, '100% Cloud Synchronized PostgreSQL'),
-                              const SizedBox(height: 12),
-                              _buildFeaturePill(Icons.speed_rounded, 'Real-time REST API CRUD with Spring Boot'),
-                              const SizedBox(height: 12),
-                              _buildFeaturePill(Icons.business_rounded, 'Multi-Entity Fleet Directory Support'),
-                            ],
-                          ),
-
-                          const Spacer(),
-                          const SizedBox(height: 24),
-
-                          // Footer Note
-                          Text(
-                            '© ${DateTime.now().year} Stark Group Industries. All operational rights reserved.',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        )
+                      : Padding(padding: const EdgeInsets.all(26), child: Column(children: [_welcomePanel(compact: true), const SizedBox(height: 25), _formPanel()])),
                 );
-              },
+              }),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeaturePill(IconData icon, String text) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Colors.white, size: 14),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Authentication Form Content
-  Widget _buildAuthFormContent(ThemeData theme, bool isDark) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Screen Title
-          Text(
-            _isRegistering ? 'Create Corporate Account' : 'Welcome Back',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : AppTheme.slateNavy,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _isRegistering
-                ? 'Register to access and administer vehicle asset directories.'
-                : 'Welcome back. Enter your credentials or continue with Google.',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Google Sign-In Button
-          _buildGoogleSignInButton(isDark),
-
-          const SizedBox(height: 24),
-
-          // Divider with text
-          Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(
-                  'OR CONTINUE WITH EMAIL',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Divider(
-                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Error Banner
-          if (_errorMessage != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFCA5A5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Color(0xFFDC2626), size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(
-                        color: Color(0xFF991B1B),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Full Name field for registration
-          if (_isRegistering) ...[
-            Text(
-              'Full Name',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : AppTheme.slateNavy,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Tony Stark',
-                prefixIcon: Icon(Icons.person_outline_rounded),
-              ),
-              validator: (val) {
-                if (_isRegistering && (val == null || val.trim().isEmpty)) {
-                  return 'Please enter your full name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Corporate Email Field
-          Text(
-            'Corporate Email',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : AppTheme.slateNavy,
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              hintText: 'admin@starkgroup.com',
-              prefixIcon: Icon(Icons.alternate_email_rounded),
-            ),
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return 'Please enter your corporate email';
-              }
-              if (!val.contains('@')) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Password Field
-          Text(
-            'Access Key / Password',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : AppTheme.slateNavy,
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
-              ),
-            ),
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return 'Please enter your password';
-              }
-              if (val.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Primary Submit Button
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: widget.authService.isLoading ? null : _handleAuth,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: widget.authService.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      _isRegistering ? 'Create Account' : 'Sign In to Fleet Console',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Toggle Sign In / Register
-          Center(
-            child: TextButton(
-              onPressed: () {
-                setState(() {
-                  _isRegistering = !_isRegistering;
-                  _errorMessage = null;
-                });
-              },
-              child: Text(
-                _isRegistering
-                    ? 'Already have an account? Sign In'
-                    : "Don't have an account? Register here",
-                style: const TextStyle(
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Stark Demo Credentials Pill (For instant testing/grading)
-          InkWell(
-            onTap: _fillDemoCredentials,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFBFDBFE),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.flash_on_rounded,
-                    color: isDark ? const Color(0xFF60A5FA) : AppTheme.primaryBlue,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Use Stark Demo Credentials',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.primaryBlueDark,
-                          ),
-                        ),
-                        Text(
-                          'admin@starkgroup.com / stark123 (Fleet Director)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.touch_app_rounded, size: 16, color: Color(0xFF94A3B8)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Authentic Google Sign-In Button with multi-colored 'G' logo
-  Widget _buildGoogleSignInButton(bool isDark) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton(
-        onPressed: widget.authService.isLoading ? null : _handleGoogleSignIn,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          side: BorderSide(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-            width: 1.2,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildGoogleGLogo(),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Continue with Google',
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppTheme.slateNavy,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  /// 4-Color Google 'G' Vector Icon
-  Widget _buildGoogleGLogo() {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
-      ),
-    );
-  }
+  Widget _welcomePanel({bool compact = false}) => Container(
+        constraints: BoxConstraints(minHeight: compact ? 0 : 570),
+        padding: EdgeInsets.all(compact ? 0 : 42),
+        decoration: BoxDecoration(color: const Color(0xFFE9EDE5), borderRadius: compact ? BorderRadius.zero : const BorderRadius.horizontal(left: Radius.circular(18))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: compact ? MainAxisAlignment.start : MainAxisAlignment.spaceBetween, children: [
+          Row(children: [Container(width: 35, height: 35, decoration: BoxDecoration(color: _authGreen, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.route_rounded, color: Colors.white, size: 19)), const SizedBox(width: 10), const Text('stark fleet', style: TextStyle(color: _authInk, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.5))]),
+          if (!compact) ...[
+            const SizedBox(height: 70),
+            Text(_isRegistering ? 'A better start for your fleet.' : 'Good to have you back.', style: const TextStyle(color: _authInk, fontSize: 33, letterSpacing: -1.2, height: 1.1, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 15),
+            Text(_isRegistering ? 'Create a workspace for your company, then bring the people and records that keep your fleet moving.' : 'Pick up where your team left off. Your fleet records will be right where you expect them.', style: const TextStyle(color: _authMuted, fontSize: 15, height: 1.65)),
+            const SizedBox(height: 40),
+            const _WelcomePoint(icon: Icons.inventory_2_outlined, title: 'Fleet records in one place'),
+            const _WelcomePoint(icon: Icons.event_available_outlined, title: 'Upcoming work, easier to see'),
+            const _WelcomePoint(icon: Icons.people_outline, title: 'A workspace for your team'),
+            const SizedBox(height: 30),
+            const Text('A calmer way to keep things moving.', style: TextStyle(color: Color(0xFF68766B), fontSize: 12)),
+          ],
+        ]),
+      );
+
+  Widget _formPanel() => ListenableBuilder(
+        listenable: widget.authService,
+        builder: (context, _) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_isRegistering ? 'Create your workspace account' : 'Sign in to your workspace', style: const TextStyle(color: _authInk, fontSize: 25, fontWeight: FontWeight.w600, letterSpacing: -0.7)),
+          const SizedBox(height: 8),
+          Text(_isRegistering ? 'Use your work email. You can invite your team after setup.' : 'Use the email address connected to your Stark Fleet account.', style: const TextStyle(color: _authMuted, fontSize: 13, height: 1.5)),
+          const SizedBox(height: 26),
+          SizedBox(width: double.infinity, height: 48, child: OutlinedButton.icon(onPressed: widget.authService.isLoading ? null : _google, icon: const _GoogleGlyph(), label: const Text('Continue with Google'), style: OutlinedButton.styleFrom(foregroundColor: _authInk, side: const BorderSide(color: Color(0xFFDDE0D8)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))))),
+          const SizedBox(height: 20),
+          const Row(children: [Expanded(child: Divider(color: Color(0xFFE7E8E2))), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('OR WITH EMAIL', style: TextStyle(color: _authMuted, fontSize: 10, letterSpacing: 1, fontWeight: FontWeight.w600))), Expanded(child: Divider(color: Color(0xFFE7E8E2)))]),
+          const SizedBox(height: 19),
+          Form(
+            key: _formKey,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_isRegistering) ...[
+                const _FieldLabel('Your name'),
+                TextFormField(controller: _nameController, textCapitalization: TextCapitalization.words, autofillHints: const [AutofillHints.name], decoration: _input('Name your teammates will recognize'), validator: (value) => value == null || value.trim().isEmpty ? 'Add your name.' : null),
+                const SizedBox(height: 15),
+              ],
+              const _FieldLabel('Work email'),
+              TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.email], decoration: _input('you@company.com'), validator: (value) => value == null || !value.contains('@') || !value.contains('.') ? 'Enter a valid email address.' : null),
+              const SizedBox(height: 15),
+              const _FieldLabel('Password'),
+              TextFormField(controller: _passwordController, obscureText: !_showPassword, autofillHints: _isRegistering ? const [AutofillHints.newPassword] : const [AutofillHints.password], decoration: _input('At least 8 characters').copyWith(suffixIcon: IconButton(onPressed: () => setState(() => _showPassword = !_showPassword), icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18, color: _authMuted))), validator: (value) => value == null || value.length < 8 ? 'Use at least 8 characters.' : null),
+            ]),
+          ),
+          if (!_isRegistering) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: widget.authService.isLoading ? null : _resetPassword, style: TextButton.styleFrom(foregroundColor: _authGreen, padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8)), child: const Text('Forgot password?'))),
+          if (widget.authService.errorMessage != null) _MessageBox(text: widget.authService.errorMessage!, error: true),
+          if (widget.authService.infoMessage != null) _MessageBox(text: widget.authService.infoMessage!, error: false),
+          if (!widget.authService.isConfigured) const _MessageBox(text: 'Authentication is not configured for this local build yet. Add your Supabase project URL and publishable key to run configuration.', error: false),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, height: 48, child: FilledButton(onPressed: widget.authService.isLoading ? null : _submit, style: FilledButton.styleFrom(backgroundColor: _authGreen, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: widget.authService.isLoading ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(_isRegistering ? 'Create account' : 'Sign in', style: const TextStyle(fontWeight: FontWeight.w600)))),
+          const SizedBox(height: 18),
+          Center(child: Wrap(alignment: WrapAlignment.center, children: [Text(_isRegistering ? 'Already have a workspace?' : 'New to Stark Fleet?', style: const TextStyle(color: _authMuted, fontSize: 12)), TextButton(onPressed: () => setState(() { _isRegistering = !_isRegistering; widget.authService.clearMessages(); }), style: TextButton.styleFrom(foregroundColor: _authGreen, padding: const EdgeInsets.only(left: 5)), child: Text(_isRegistering ? 'Sign in' : 'Create an account', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)))])),
+          Center(child: TextButton(onPressed: () => Navigator.pop(context), style: TextButton.styleFrom(foregroundColor: _authMuted), child: const Text('Back to Stark Fleet', style: TextStyle(fontSize: 12)))),
+        ]),
+      );
+
+  InputDecoration _input(String hint) => InputDecoration(hintText: hint, hintStyle: const TextStyle(color: Color(0xFFADB2AA), fontSize: 13), filled: true, fillColor: const Color(0xFFFAFAF8), contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE3E5DE))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _authGreen, width: 1.3)), errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFB85448))), focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFB85448))));
 }
 
-/// Official 4-color Google G icon painter
-class _GoogleLogoPainter extends CustomPainter {
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+  final String text;
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w / 2, h / 2);
-    final radius = w / 2;
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 7), child: Text(text, style: const TextStyle(color: _authInk, fontWeight: FontWeight.w600, fontSize: 12)));
+}
 
-    final bluePaint = Paint()..color = const Color(0xFF4285F4);
-    final greenPaint = Paint()..color = const Color(0xFF34A853);
-    final yellowPaint = Paint()..color = const Color(0xFFFBBC05);
-    final redPaint = Paint()..color = const Color(0xFFEA4335);
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    // Blue Bar (Horizontal crossbar)
-    final blueBar = Path()
-      ..moveTo(center.dx, center.dy - radius * 0.22)
-      ..lineTo(w, center.dy - radius * 0.22)
-      ..lineTo(w, center.dy + radius * 0.22)
-      ..lineTo(center.dx, center.dy + radius * 0.22)
-      ..close();
-    canvas.drawPath(blueBar, bluePaint);
-
-    // Arc sections
-    canvas.drawArc(rect, -0.7, 1.4, true, bluePaint);
-    canvas.drawArc(rect, 0.7, 1.4, true, greenPaint);
-    canvas.drawArc(rect, 2.1, 1.4, true, yellowPaint);
-    canvas.drawArc(rect, 3.5, 1.4, true, redPaint);
-
-    // Inner Cutout
-    final innerPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.58, innerPaint);
-
-    // Re-draw Blue crossbar after circle cutout
-    canvas.drawRect(
-      Rect.fromLTRB(center.dx, center.dy - radius * 0.20, w, center.dy + radius * 0.20),
-      bluePaint,
-    );
-  }
-
+class _MessageBox extends StatelessWidget {
+  const _MessageBox({required this.text, required this.error});
+  final String text;
+  final bool error;
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => Container(width: double.infinity, margin: const EdgeInsets.only(top: 13), padding: const EdgeInsets.all(11), decoration: BoxDecoration(color: error ? const Color(0xFFFFF1EF) : const Color(0xFFEEF4EC), borderRadius: BorderRadius.circular(8)), child: Text(text, style: TextStyle(color: error ? const Color(0xFF8B352C) : _authGreen, fontSize: 12, height: 1.45)));
+}
+
+class _WelcomePoint extends StatelessWidget {
+  const _WelcomePoint({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+  @override
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 17), child: Row(children: [Icon(icon, color: _authGreen, size: 18), const SizedBox(width: 11), Text(title, style: const TextStyle(color: _authInk, fontSize: 13, fontWeight: FontWeight.w500))]));
+}
+
+class _GoogleGlyph extends StatelessWidget {
+  const _GoogleGlyph();
+  @override
+  Widget build(BuildContext context) => const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 17, fontWeight: FontWeight.w700));
 }

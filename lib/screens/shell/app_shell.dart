@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/api_constants.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/storage/session_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/vehicle.dart';
@@ -12,6 +11,7 @@ import '../../widgets/responsive_layout.dart';
 import '../dashboard/dashboard_overview_screen.dart';
 import '../vehicles/vehicle_form_screen.dart';
 import '../vehicles/vehicle_list_screen.dart';
+import '../settings/billing_card.dart';
 
 /// Navigation views managed within the Stark Group application shell.
 enum ShellView {
@@ -45,14 +45,18 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  // Start on vehicleList so both Directory and KPIs are immediately accessible for test suites and users
-  ShellView _currentView = ShellView.vehicleList;
+  ShellView _currentView = ShellView.dashboard;
   Vehicle? _editingVehicle;
 
   @override
   void initState() {
     super.initState();
     _restoreRouteFromUrl();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.vehicleService.vehicles.isEmpty) {
+        widget.vehicleService.fetchVehicles();
+      }
+    });
   }
 
   void _restoreRouteFromUrl() {
@@ -135,7 +139,7 @@ class _AppShellState extends State<AppShell> {
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        '${AppConstants.companyBrand} VMS',
+                        'Stark Fleet',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
@@ -259,7 +263,7 @@ class _AppShellState extends State<AppShell> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               Text(
-                '$userRole • ${user?.email ?? "admin@starkgroup.com"}',
+                '$userRole • ${user?.email ?? ""}',
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -276,7 +280,7 @@ class _AppShellState extends State<AppShell> {
             children: [
               Icon(Icons.tune_rounded, size: 18),
               SizedBox(width: 10),
-              Text('System & API Settings'),
+              Text('Workspace settings'),
             ],
           ),
         ),
@@ -539,7 +543,7 @@ class _AppShellState extends State<AppShell> {
                   const AppLogo(size: 38, isDark: true),
                   const SizedBox(height: 12),
                   Text(
-                    '${AppConstants.companyBrand} VMS',
+                    'Stark Fleet',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -547,7 +551,7 @@ class _AppShellState extends State<AppShell> {
                     ),
                   ),
                   Text(
-                    widget.authService.currentUser?.email ?? 'admin@starkgroup.com',
+                    widget.authService.currentUser?.email ?? '',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
@@ -659,23 +663,26 @@ class _AppShellState extends State<AppShell> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'System Settings & API Configuration',
+                'Workspace settings',
                 style: TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : AppTheme.slateNavy,
                   letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Manage backend connectivity endpoints and view runtime telemetry.',
+                'Manage your workspace, billing and connection details.',
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
               const SizedBox(height: 24),
+
+              BillingCard(authService: widget.authService),
+              const SizedBox(height: 20),
 
               // API Endpoint Card
               Container(
@@ -733,15 +740,15 @@ class _AppShellState extends State<AppShell> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Active Corporate Session', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text('Your account', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                     const SizedBox(height: 12),
-                    Text('User: ${widget.authService.currentUser?.name ?? "Tony Stark"}'),
+                    Text('Name: ${widget.authService.currentUser?.name ?? "Fleet manager"}'),
                     const SizedBox(height: 4),
-                    Text('Email: ${widget.authService.currentUser?.email ?? "admin@starkgroup.com"}'),
+                    Text('Email: ${widget.authService.currentUser?.email ?? ""}'),
                     const SizedBox(height: 4),
-                    Text('Role: ${widget.authService.currentUser?.role ?? "Fleet Administrator"}'),
+                    Text('Workspace ID: ${widget.authService.workspaceId ?? "Not connected"}'),
                     const SizedBox(height: 4),
-                    Text('Auth Provider: ${widget.authService.currentUser?.authProvider ?? "LOCAL"}'),
+                    Text('Signed in with: ${widget.authService.currentUser?.authProvider ?? ""}'),
                   ],
                 ),
               ),
@@ -773,7 +780,7 @@ class _AppShellState extends State<AppShell> {
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'Backend is set to localhost:8080 (blocked on hosted HTTPS). Connect your live Render backend URL.',
+              'This hosted workspace still points to localhost. Connect your deployed API before using fleet data.',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

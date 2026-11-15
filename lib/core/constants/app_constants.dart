@@ -2,10 +2,10 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Vehicle Management System';
-  static const String companyBrand = 'STARK GROUP';
-  static const String appSubtitle = 'Fleet Operations Console';
-  static const String appVersion = 'v1.0.0-PROD';
+  static const String appName = 'Stark Fleet';
+  static const String companyBrand = 'STARK FLEET';
+  static const String appSubtitle = 'Fleet operations';
+  static const String appVersion = 'v2.0.0';
 
   // Responsive breakpoints (in pixels)
   static const double mobileBreakpoint = 650.0;
