@@ -49,7 +49,7 @@ class _Navigation extends StatelessWidget {
             children: [
               const _Wordmark(),
               const Spacer(),
-              if (MediaQuery.sizeOf(context).width > 760) ...[
+              if (MediaQuery.sizeOf(context).width > 980) ...[
                 _navLink(context, 'Product', _operationsKey),
                 _navLink(context, 'How it works', _workflowKey),
                 _navLink(context, 'Pricing', _pricingKey),
@@ -188,7 +188,12 @@ class _Hero extends StatelessWidget {
           const Row(children: [
             Icon(Icons.check_circle_outline, color: _green, size: 16),
             SizedBox(width: 7),
-            Text('Start with your first fleet. Add your team when you’re ready.', style: TextStyle(color: _muted, fontSize: 12)),
+            Expanded(
+              child: Text(
+                'Start with your first fleet. Add your team when you’re ready.',
+                style: TextStyle(color: _muted, fontSize: 12),
+              ),
+            ),
           ]),
         ],
       );
@@ -534,8 +539,10 @@ class _Footer extends StatelessWidget {
                 const SizedBox(width: 9),
                 const Text('stark fleet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 const Spacer(),
-                const Text('Fleet operations, made clearer.', style: TextStyle(color: Color(0xFFB9C2B8), fontSize: 12)),
-                const SizedBox(width: 22),
+                if (MediaQuery.sizeOf(context).width > 600) ...[
+                  const Text('Fleet operations, made clearer.', style: TextStyle(color: Color(0xFFB9C2B8), fontSize: 12)),
+                  const SizedBox(width: 22),
+                ],
                 TextButton(onPressed: () => Navigator.pushNamed(context, '/login'), child: const Text('Log in', style: TextStyle(color: Color(0xFFCBD4CA)))),
               ]),
             ),

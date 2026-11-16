@@ -40,29 +40,31 @@ class _WorkspaceSetupScreenState extends State<WorkspaceSetupScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF6F6F1),
         body: Center(
-          child: ListenableBuilder(
-            listenable: widget.authService,
-            builder: (context, _) => Container(
-              width: 500,
-              margin: const EdgeInsets.all(22),
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE4E6DE))),
-              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.apartment_outlined, color: _setupGreen, size: 25),
-                const SizedBox(height: 18),
-                const Text('Create your fleet workspace', style: TextStyle(color: _setupInk, fontSize: 25, letterSpacing: -0.7, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                const Text('This will be the private home for your company’s vehicles and operations.', style: TextStyle(color: Color(0xFF737A72), fontSize: 13, height: 1.5)),
-                const SizedBox(height: 24),
-                TextField(controller: _nameController, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Workspace name', hintText: 'e.g. Northside Logistics', border: OutlineInputBorder())),
-                if (widget.authService.errorMessage != null) ...[
-                  const SizedBox(height: 13),
-                  Text(widget.authService.errorMessage!, style: const TextStyle(color: Color(0xFF9C4035), fontSize: 12)),
-                ],
-                const SizedBox(height: 21),
-                SizedBox(width: double.infinity, child: FilledButton(onPressed: _creating || widget.authService.isWorkspaceLoading ? null : _create, style: FilledButton.styleFrom(backgroundColor: _setupGreen, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)), child: _creating ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Create workspace'))),
-                Align(alignment: Alignment.center, child: TextButton(onPressed: widget.authService.logout, style: TextButton.styleFrom(foregroundColor: const Color(0xFF737A72)), child: const Text('Sign out'))),
-              ]),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            child: ListenableBuilder(
+              listenable: widget.authService,
+              builder: (context, _) => Container(
+                width: 500,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE4E6DE))),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.apartment_outlined, color: _setupGreen, size: 25),
+                  const SizedBox(height: 18),
+                  const Text('Create your fleet workspace', style: TextStyle(color: _setupInk, fontSize: 25, letterSpacing: -0.7, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  const Text('This will be the private home for your company’s vehicles and operations.', style: TextStyle(color: Color(0xFF737A72), fontSize: 13, height: 1.5)),
+                  const SizedBox(height: 24),
+                  TextField(controller: _nameController, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Workspace name', hintText: 'e.g. Northside Logistics', border: OutlineInputBorder())),
+                  if (widget.authService.errorMessage != null) ...[
+                    const SizedBox(height: 13),
+                    Text(widget.authService.errorMessage!, style: const TextStyle(color: Color(0xFF9C4035), fontSize: 12)),
+                  ],
+                  const SizedBox(height: 21),
+                  SizedBox(width: double.infinity, child: FilledButton(onPressed: _creating || widget.authService.isWorkspaceLoading ? null : _create, style: FilledButton.styleFrom(backgroundColor: _setupGreen, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)), child: _creating ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Create workspace'))),
+                  Align(alignment: Alignment.center, child: TextButton(onPressed: widget.authService.logout, style: TextButton.styleFrom(foregroundColor: const Color(0xFF737A72)), child: const Text('Sign out'))),
+                ]),
+              ),
             ),
           ),
         ),
